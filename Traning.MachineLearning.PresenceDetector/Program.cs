@@ -34,6 +34,7 @@ namespace Traning.MachineLearning.PresenceDetector
 
         static void Main(string[] args)
         {
+            FrameStopwatch.Start();
             var mlContext = new MLContext();
             var data = mlContext.Data.LoadFromTextFile<HumanData>($"{dir}\\data.csv", separatorChar: ',');
             var split = mlContext.Data.TrainTestSplit(data, 0.8);
@@ -46,9 +47,9 @@ namespace Traning.MachineLearning.PresenceDetector
 
             var model = pipe.Fit(split.TrainSet);
             var test = model.Transform(split.TestSet);
-
+            FrameStopwatch.Stop();
             var metrics = mlContext.BinaryClassification.Evaluate(test, "Label");
-            Console.WriteLine(metrics.Accuracy);
+            Console.WriteLine($"Traning done. Accuracy: {metrics.Accuracy:P2}, Time: {FrameStopwatch.Elapsed}");
 
             //ctx.Model.Save(model, data.Schema, "model.zip");
             //DataViewSchema modelSchema;

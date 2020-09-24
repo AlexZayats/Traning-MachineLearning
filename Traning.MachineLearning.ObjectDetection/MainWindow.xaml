@@ -1,0 +1,56 @@
+﻿<Window x:Class="Traning.MachineLearning.ObjectDetection.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:Traning.MachineLearning.ObjectDetection"
+        mc:Ignorable="d"
+        Title="MainWindow" Height="600" Width="800">
+    <Grid>
+        <TabControl>
+            <TabItem Header="Датчик присутсвия">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+                    <StackPanel Grid.Row="0">
+                        <Button Click="T1_Start_Button_Click">Start</Button>
+                        <Button Click="T1_Stop_Button_Click">Stop</Button>
+                        <Label x:Name="Info1" />
+                    </StackPanel>
+                    <Image x:Name="Image1" Grid.Row="1" />
+                </Grid>
+            </TabItem>
+            <TabItem Header="Датчик присутствия (builder)">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+                    <StackPanel Grid.Row="0">
+                        <Button Click="T2_Start_Button_Click">Start</Button>
+                        <Button Click="T2_Stop_Button_Click">Stop</Button>
+                        <Label x:Name="Info2" />
+                    </StackPanel>
+                    <Image x:Name="Image2" Grid.Row="1" />
+                </Grid>
+            </TabItem>
+            <TabItem Header="Поиск объектов">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+                    <StackPanel Grid.Row="0">
+                        <Button Click="T3_Start_Button_Click">Start</Button>
+                        <Button Click="T3_Stop_Button_Click">Stop</Button>
+                        <Label x:Name="Info3" />
+                    </StackPanel>
+                    <Image x:Name="Image3" Grid.Row="1" />
+                </Grid>
+            </TabItem>
+        </TabControl>
+
+    </Grid>
+</Window>

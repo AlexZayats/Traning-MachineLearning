@@ -8,6 +8,6 @@ namespace Traning.MachineLearning.ObjectDetection.Data
         public string Path { get; set; }
 
         [ColumnName("Label")]
-        public float Label { get; set; }
+        public string Label { get; set; }
     }
 }

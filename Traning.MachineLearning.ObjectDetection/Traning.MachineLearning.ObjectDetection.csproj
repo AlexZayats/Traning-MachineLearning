@@ -10,6 +10,8 @@
     <PackageReference Include="AForge.Video.DirectShow" Version="2.2.5" />
     <PackageReference Include="Microsoft.ML" Version="1.5.2" />
     <PackageReference Include="Microsoft.ML.ImageAnalytics" Version="1.5.2" />
+    <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.4.0" />
+    <PackageReference Include="Microsoft.ML.OnnxTransformer" Version="1.5.2" />
     <PackageReference Include="Microsoft.ML.TensorFlow" Version="1.5.2" />
     <PackageReference Include="Microsoft.ML.Vision" Version="1.5.2" />
     <PackageReference Include="SciSharp.TensorFlow.Redist-Windows-GPU" Version="2.3.0" />
@@ -19,6 +21,10 @@
     <None Update="Builder\MLModel.zip">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="YoloParser\NewFolder\" />
   </ItemGroup>
 
 </Project>

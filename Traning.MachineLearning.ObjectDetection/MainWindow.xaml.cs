@@ -6,12 +6,14 @@ using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
+using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Threading;
 using Traning.MachineLearning.ObjectDetection.Builder;
 using Traning.MachineLearning.ObjectDetection.Data;
 using Traning.MachineLearning.ObjectDetection.Helpers;
+using Traning.MachineLearning.ObjectDetection.YoloParser;
 
 namespace Traning.MachineLearning.ObjectDetection
 {
@@ -20,9 +22,12 @@ namespace Traning.MachineLearning.ObjectDetection
         private VideoCaptureDevice _video1;
         private VideoCaptureDevice _video2;
         private VideoCaptureDevice _video3;
+        private VideoCaptureDevice _video4;
         private PredictionEngine<HumanData, HumanPrediction> _predictionEngine1;
         private PredictionEngine<ObjectData, ObjectDetectionPrediction> _predictionEngine3;
         private string _imagesFolder1 = @"h:\data\human-detection";
+        private YoloOutputParser _parser = new YoloOutputParser();
+        private Stopwatch _stopwatch = new Stopwatch();
 
         public MainWindow()
         {
@@ -132,30 +137,31 @@ namespace Traning.MachineLearning.ObjectDetection
 
         private void T3_Start_Button_Click(object sender, RoutedEventArgs e)
         {
-            var tfm = @"h:\data\models\tensorflow_inception_graph.pb";
+            var onnx = @"h:\data\models\tinyyolov2-8.onnx";
             var mlContext = new MLContext();
-            var pipe = mlContext.Transforms.LoadImages("Image", _imagesFolder1, "Path")
-                .Append(mlContext.Transforms.ResizeImages("ImageResized", 244, 244, "Image"))
-                .Append(mlContext.Transforms.ExtractPixels("input", "ImageResized", interleavePixelColors: true))
-                .Append(mlContext.Model.LoadTensorFlowModel(tfm).ScoreTensorFlowModel("softmax2_pre_activation", "input", true))
-                .Append(mlContext.Transforms.CopyColumns("Label", "softmax2_pre_activation"));
+            var pipe = mlContext.Transforms.LoadImages("image", _imagesFolder1, "Path")
+                .Append(mlContext.Transforms.ResizeImages("image", 416, 416))
+                .Append(mlContext.Transforms.ExtractPixels("image"))
+                .Append(mlContext.Transforms.ApplyOnnxModel(modelFile: onnx, outputColumnNames: new[] { "grid" }, inputColumnNames: new[] { "image" }));
 
-            var enumerableData = new List<ObjectData>();
-            var data = mlContext.Data.LoadFromEnumerable(enumerableData);
-
+            var data = mlContext.Data.LoadFromEnumerable(new List<ObjectData>());
             _predictionEngine3 = mlContext.Model.CreatePredictionEngine<ObjectData, ObjectDetectionPrediction>(pipe.Fit(data));
 
             var filterInfoCollection = new FilterInfoCollection(FilterCategory.VideoInputDevice);
             _video3 = new VideoCaptureDevice(filterInfoCollection[0].MonikerString);
             _video3.NewFrame += _video3_NewFrame;
             _video3.Start();
+            _stopwatch.Restart();
         }
 
         private void T3_Stop_Button_Click(object sender, RoutedEventArgs e)
         {
             _video3?.SignalToStop();
             Image3.Source = null;
+            _stopwatch.Stop();
         }
+
+        private IList<YoloBoundingBox> _boundingBoxes;
 
         private void _video3_NewFrame(object sender, NewFrameEventArgs eventArgs)
         {
@@ -163,15 +169,59 @@ namespace Traning.MachineLearning.ObjectDetection
             eventArgs.Frame.Save(path, ImageFormat.Png);
             if (_predictionEngine3 != null)
             {
-                var prediction = _predictionEngine3.Predict(new ObjectData { Path = path });
-                Dispatcher.Invoke(() =>
+                if (_stopwatch.ElapsedMilliseconds > 200)
                 {
-                    Info3.Content = prediction.Prediction;
-                });
+                    var prediction = _predictionEngine3.Predict(new ObjectData { Path = path });
+                    _boundingBoxes = _parser.FilterBoundingBoxes(_parser.ParseOutputs(prediction.PredictedLabels), 5, .5F);
+                    
+                    _stopwatch.Restart();
+                }
+                if (_boundingBoxes != null)
+                {
+                    using (var gr = Graphics.FromImage(eventArgs.Frame))
+                    {
+                        gr.SmoothingMode = SmoothingMode.AntiAlias;
+                        foreach (var boundingBox in _boundingBoxes)
+                        {
+                            using (var thick_pen = new Pen(boundingBox.BoxColor, 2))
+                            {
+                                var drawFont = new Font("Arial", 12);
+                                var drawBrush = new SolidBrush(boundingBox.BoxColor);
+                                gr.DrawString($"{boundingBox.Label} [{boundingBox.Confidence:P2}]", drawFont, drawBrush, boundingBox.Rect.X * 640 / 416, boundingBox.Rect.Y * 480 / 416 - 20);
+                                gr.DrawRectangle(thick_pen, boundingBox.Rect.X * 640 / 416, boundingBox.Rect.Y * 480 / 416, boundingBox.Rect.Width * 640 / 416, boundingBox.Rect.Height * 480 / 416);
+                            }
+                        }
+                    }
+                }
             }
             Dispatcher.Invoke(() =>
             {
                 Image3.Source = eventArgs.Frame.ToBitmapImage();
+            });
+        }
+
+        private void T4_Start_Button_Click(object sender, RoutedEventArgs e)
+        {
+            var filterInfoCollection = new FilterInfoCollection(FilterCategory.VideoInputDevice);
+            _video4 = new VideoCaptureDevice(filterInfoCollection[0].MonikerString);
+            _video4.NewFrame += _video4_NewFrame;
+            _video4.Start();
+            _stopwatch.Restart();
+        }
+
+        private void T4_Stop_Button_Click(object sender, RoutedEventArgs e)
+        {
+            _video4?.SignalToStop();
+            Image4.Source = null;
+        }
+
+        private void _video4_NewFrame(object sender, NewFrameEventArgs eventArgs)
+        {
+            var path = $"{_imagesFolder1}\\temp.png";
+            eventArgs.Frame.Save(path, ImageFormat.Png);
+            Dispatcher.Invoke(() =>
+            {
+                Image4.Source = eventArgs.Frame.ToBitmapImage();
             });
         }
     }

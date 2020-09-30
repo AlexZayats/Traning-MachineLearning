@@ -50,6 +50,7 @@ namespace Traning.MachineLearning.ObjectDetection
             var stopwatch = new Stopwatch();
             stopwatch.Start();
             var model = pipe.Fit(split.TrainSet);
+            //mlContext.Model.Save(model, data.Schema, "MLModel3.zip");
             var test = model.Transform(split.TestSet);
             stopwatch.Stop();
             var metrics = mlContext.BinaryClassification.Evaluate(test, "Label");
@@ -99,6 +100,40 @@ namespace Traning.MachineLearning.ObjectDetection
             Dispatcher.Invoke(() =>
             {
                 Image1.Source = eventArgs.Frame.ToBitmapImage();
+            });
+        }
+
+        private void T1_1_Start_Button_Click(object sender, RoutedEventArgs e)
+        {
+            var filterInfoCollection = new FilterInfoCollection(FilterCategory.VideoInputDevice);
+            _video = new VideoCaptureDevice(filterInfoCollection[0].MonikerString);
+            _video.NewFrame += _video1_1_NewFrame;
+            _video.Start();
+        }
+
+        private void T1_1_Stop_Button_Click(object sender, RoutedEventArgs e)
+        {
+            _video?.SignalToStop();
+            Image1_1.Source = null;
+            _predictionEngine1 = null;
+        }
+
+        private void _video1_1_NewFrame(object sender, NewFrameEventArgs eventArgs)
+        {
+            var path = $"{_imagesFolder1}\\temp.png";
+            eventArgs.Frame.Save(path, ImageFormat.Png);
+            var prediction = ConsumeModel3.Predict(new HumanData { Path = path });
+            using (var gr = Graphics.FromImage(eventArgs.Frame))
+            {
+                gr.SmoothingMode = SmoothingMode.AntiAlias;
+                using (var thick_pen = new Pen(prediction.Prediction ? Color.Green : Color.Red, 5))
+                {
+                    gr.DrawRectangle(thick_pen, 0, 0, 640, 480);
+                }
+            }
+            Dispatcher.Invoke(() =>
+            {
+                Image1_1.Source = eventArgs.Frame.ToBitmapImage();
             });
         }
 

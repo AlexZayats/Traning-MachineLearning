@@ -22,6 +22,19 @@
                     <Image x:Name="Image1" Grid.Row="1" />
                 </Grid>
             </TabItem>
+            <TabItem Header="Датчик присутсвия (trained)">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+                    <StackPanel Grid.Row="0">
+                        <Button Click="T1_1_Start_Button_Click">Start</Button>
+                        <Button Click="T1_1_Stop_Button_Click">Stop</Button>
+                    </StackPanel>
+                    <Image x:Name="Image1_1" Grid.Row="1" />
+                </Grid>
+            </TabItem>
             <TabItem Header="Датчик присутствия (builder)">
                 <Grid>
                     <Grid.RowDefinitions>

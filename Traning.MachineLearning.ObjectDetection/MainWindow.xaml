@@ -57,8 +57,7 @@
                         <RowDefinition Height="*" />
                     </Grid.RowDefinitions>
                     <StackPanel Grid.Row="0">
-                        <Button Click="T4_Start_Button_Click">Start</Button>
-                        <Button Click="T4_Stop_Button_Click">Stop</Button>
+                        <Button Click="T4_Browse_Button_Click">Browse</Button>
                         <Label x:Name="Info4" />
                     </StackPanel>
                     <Image x:Name="Image4" Grid.Row="1" />

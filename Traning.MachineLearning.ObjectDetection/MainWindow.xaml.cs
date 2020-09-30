@@ -1,6 +1,8 @@
 ﻿using AForge.Video;
 using AForge.Video.DirectShow;
 using Microsoft.ML;
+using Microsoft.Win32;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
@@ -19,15 +21,14 @@ namespace Traning.MachineLearning.ObjectDetection
 {
     public partial class MainWindow : Window
     {
-        private VideoCaptureDevice _video1;
-        private VideoCaptureDevice _video2;
-        private VideoCaptureDevice _video3;
-        private VideoCaptureDevice _video4;
+        private VideoCaptureDevice _video;
         private PredictionEngine<HumanData, HumanPrediction> _predictionEngine1;
         private PredictionEngine<ObjectData, ObjectDetectionPrediction> _predictionEngine3;
         private string _imagesFolder1 = @"h:\data\human-detection";
         private YoloOutputParser _parser = new YoloOutputParser();
         private Stopwatch _stopwatch = new Stopwatch();
+
+        private string[] _builder2Results = new[] { "buildings", "forest", "glacier", "mountain", "sea", "street" };
 
         public MainWindow()
         {
@@ -67,14 +68,14 @@ namespace Traning.MachineLearning.ObjectDetection
             }
 
             var filterInfoCollection = new FilterInfoCollection(FilterCategory.VideoInputDevice);
-            _video1 = new VideoCaptureDevice(filterInfoCollection[0].MonikerString);
-            _video1.NewFrame += _video1_NewFrame;
-            _video1.Start();
+            _video = new VideoCaptureDevice(filterInfoCollection[0].MonikerString);
+            _video.NewFrame += _video1_NewFrame;
+            _video.Start();
         }
 
         private void T1_Stop_Button_Click(object sender, RoutedEventArgs e)
         {
-            _video1?.SignalToStop();
+            _video?.SignalToStop();
             Image1.Source = null;
             _predictionEngine1 = null;
         }
@@ -104,14 +105,14 @@ namespace Traning.MachineLearning.ObjectDetection
         private void T2_Start_Button_Click(object sender, RoutedEventArgs e)
         {
             var filterInfoCollection = new FilterInfoCollection(FilterCategory.VideoInputDevice);
-            _video2 = new VideoCaptureDevice(filterInfoCollection[0].MonikerString);
-            _video2.NewFrame += _video2_NewFrame;
-            _video2.Start();
+            _video = new VideoCaptureDevice(filterInfoCollection[0].MonikerString);
+            _video.NewFrame += _video2_NewFrame;
+            _video.Start();
         }
 
         private void T2_Stop_Button_Click(object sender, RoutedEventArgs e)
         {
-            _video2?.SignalToStop();
+            _video?.SignalToStop();
             Image2.Source = null;
         }
 
@@ -119,7 +120,7 @@ namespace Traning.MachineLearning.ObjectDetection
         {
             var path = $"{_imagesFolder1}\\temp.png";
             eventArgs.Frame.Save(path, ImageFormat.Png);
-            var prediction = ConsumeModel.Predict(new ModelInput { ImageSource = path });
+            var prediction = ConsumeModel1.Predict(new ModelInput { ImageSource = path });
             using (var gr = Graphics.FromImage(eventArgs.Frame))
             {
                 gr.SmoothingMode = SmoothingMode.AntiAlias;
@@ -148,15 +149,15 @@ namespace Traning.MachineLearning.ObjectDetection
             _predictionEngine3 = mlContext.Model.CreatePredictionEngine<ObjectData, ObjectDetectionPrediction>(pipe.Fit(data));
 
             var filterInfoCollection = new FilterInfoCollection(FilterCategory.VideoInputDevice);
-            _video3 = new VideoCaptureDevice(filterInfoCollection[0].MonikerString);
-            _video3.NewFrame += _video3_NewFrame;
-            _video3.Start();
+            _video = new VideoCaptureDevice(filterInfoCollection[0].MonikerString);
+            _video.NewFrame += _video3_NewFrame;
+            _video.Start();
             _stopwatch.Restart();
         }
 
         private void T3_Stop_Button_Click(object sender, RoutedEventArgs e)
         {
-            _video3?.SignalToStop();
+            _video?.SignalToStop();
             Image3.Source = null;
             _stopwatch.Stop();
         }
@@ -173,7 +174,7 @@ namespace Traning.MachineLearning.ObjectDetection
                 {
                     var prediction = _predictionEngine3.Predict(new ObjectData { Path = path });
                     _boundingBoxes = _parser.FilterBoundingBoxes(_parser.ParseOutputs(prediction.PredictedLabels), 5, .5F);
-                    
+
                     _stopwatch.Restart();
                 }
                 if (_boundingBoxes != null)
@@ -200,29 +201,23 @@ namespace Traning.MachineLearning.ObjectDetection
             });
         }
 
-        private void T4_Start_Button_Click(object sender, RoutedEventArgs e)
+        private void T4_Browse_Button_Click(object sender, RoutedEventArgs e)
         {
-            var filterInfoCollection = new FilterInfoCollection(FilterCategory.VideoInputDevice);
-            _video4 = new VideoCaptureDevice(filterInfoCollection[0].MonikerString);
-            _video4.NewFrame += _video4_NewFrame;
-            _video4.Start();
-            _stopwatch.Restart();
-        }
-
-        private void T4_Stop_Button_Click(object sender, RoutedEventArgs e)
-        {
-            _video4?.SignalToStop();
-            Image4.Source = null;
-        }
-
-        private void _video4_NewFrame(object sender, NewFrameEventArgs eventArgs)
-        {
-            var path = $"{_imagesFolder1}\\temp.png";
-            eventArgs.Frame.Save(path, ImageFormat.Png);
-            Dispatcher.Invoke(() =>
+            var dialog = new OpenFileDialog();
+            if (dialog.ShowDialog() ?? false)
             {
-                Image4.Source = eventArgs.Frame.ToBitmapImage();
-            });
+                var prediction = ConsumeModel2.Predict(new ModelInput { ImageSource = dialog.FileName });
+                using (var image = Image.FromStream(dialog.OpenFile()))
+                using (var bitmap = new Bitmap(image))
+                {
+                    var index = Array.IndexOf(_builder2Results, prediction.Prediction);
+                    Dispatcher.Invoke(() =>
+                    {
+                        Info4.Content = $"{prediction.Prediction} ({prediction.Score[index]:P2})";
+                        Image4.Source = bitmap.ToBitmapImage();
+                    });
+                }
+            }
         }
     }
 }

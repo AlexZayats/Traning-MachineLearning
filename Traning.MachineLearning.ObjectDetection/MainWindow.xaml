@@ -76,6 +76,20 @@
                     <Image x:Name="Image4" Grid.Row="1" />
                 </Grid>
             </TabItem>
+            <TabItem Header="Car Brand Detector">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+                    <StackPanel Grid.Row="0">
+                        <Button Click="T5_Train_Button_Click">Train</Button>
+                        <Button Click="T5_Browse_Button_Click">Browse</Button>
+                        <Label x:Name="Info5" />
+                    </StackPanel>
+                    <Image x:Name="Image5" Grid.Row="1" />
+                </Grid>
+            </TabItem>
         </TabControl>
 
     </Grid>

@@ -1,0 +1,13 @@
+﻿<Application x:Class="Traning.MachineLearning.MoviesScorePrediction.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:Traning.MachineLearning.MoviesScorePrediction"
+             xmlns:localConverters="clr-namespace:Traning.MachineLearning.MoviesScorePrediction.Converters"
+             StartupUri="MainWindow.xaml">
+    <Application.Resources>
+        <ResourceDictionary>
+            <localConverters:PosterImageConverter x:Key="PosterImageConverter" />
+            <localConverters:BackdropImageConverter x:Key="BackdropImageConverter" />
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>

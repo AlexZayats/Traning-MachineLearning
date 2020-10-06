@@ -8,6 +8,7 @@ using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
@@ -24,7 +25,9 @@ namespace Traning.MachineLearning.ObjectDetection
         private VideoCaptureDevice _video;
         private PredictionEngine<HumanData, HumanPrediction> _predictionEngine1;
         private PredictionEngine<ObjectData, ObjectDetectionPrediction> _predictionEngine3;
+        private PredictionEngine<ModelInput, ModelOutput> _predictionEngine5;
         private string _imagesFolder1 = @"h:\data\human-detection";
+        private string _imagesFolder5 = @"h:\data\cars";
         private YoloOutputParser _parser = new YoloOutputParser();
         private Stopwatch _stopwatch = new Stopwatch();
 
@@ -53,10 +56,15 @@ namespace Traning.MachineLearning.ObjectDetection
             //mlContext.Model.Save(model, data.Schema, "MLModel3.zip");
             var test = model.Transform(split.TestSet);
             stopwatch.Stop();
-            var metrics = mlContext.BinaryClassification.Evaluate(test, "Label");
+            var traningTime = stopwatch.Elapsed;
+            stopwatch.Restart();
+            var metrics = mlContext.BinaryClassification.CrossValidate(test, pipe);
+            stopwatch.Stop();
+            var validateTime = stopwatch.Elapsed;
+            var mean = metrics.Average(x => x.Metrics.Accuracy);
             Dispatcher.Invoke(() =>
             {
-                Info1.Content = $"Traning done. Accuracy: {metrics.Accuracy:P2}, Time: {stopwatch.Elapsed}";
+                Info1.Content = $"Traning done. Accuracy: {mean:P2}, Traning Time: {traningTime}, Validate Time: {validateTime}";
             });
             _predictionEngine1 = mlContext.Model.CreatePredictionEngine<HumanData, HumanPrediction>(model);
         }
@@ -251,6 +259,69 @@ namespace Traning.MachineLearning.ObjectDetection
                         Info4.Content = $"{prediction.Prediction} ({prediction.Score[index]:P2})";
                         Image4.Source = bitmap.ToBitmapImage();
                     });
+                }
+            }
+        }
+
+        private void Train2()
+        {
+            var tfm = @"h:\data\models\tensorflow_inception_graph.pb";
+            var mlContext = new MLContext();
+            var list = new List<ModelInput>();
+            list.AddRange(Directory.GetFiles($"{_imagesFolder5}\\audi").Select(x => new ModelInput { ImageSource = x, Label = "audi" }).ToArray());
+            list.AddRange(Directory.GetFiles($"{_imagesFolder5}\\bmw").Select(x => new ModelInput { ImageSource = x, Label = "bmw" }).ToArray());
+            list.AddRange(Directory.GetFiles($"{_imagesFolder5}\\mercedes").Select(x => new ModelInput { ImageSource = x, Label = "mercedes" }).ToArray());
+            var data = mlContext.Data.LoadFromEnumerable(list);
+            var split = mlContext.Data.TrainTestSplit(data, 0.8);
+            var pipe = mlContext.Transforms.LoadImages("Image", _imagesFolder5, "ImageSource")
+                .Append(mlContext.Transforms.ResizeImages("ImageResized", 244, 244, "Image"))
+                .Append(mlContext.Transforms.ExtractPixels("input", "ImageResized", interleavePixelColors: true))
+                .Append(mlContext.Model.LoadTensorFlowModel(tfm).ScoreTensorFlowModel("softmax2_pre_activation", "input", true))
+                .Append(mlContext.MulticlassClassification.Trainers.NaiveBayes(labelColumnName: "Label", featureColumnName: "softmax2_pre_activation"));
+
+            var stopwatch = new Stopwatch();
+            stopwatch.Start();
+            var model = pipe.Fit(split.TrainSet);
+            var test = model.Transform(split.TestSet);
+            stopwatch.Stop();
+            var traningTime = stopwatch.Elapsed;
+            stopwatch.Restart();
+            var metrics = mlContext.MulticlassClassification.Evaluate(test);
+            stopwatch.Stop();
+            var validateTime = stopwatch.Elapsed;
+            //var mean = metrics.Average(x => x.Metrics.TopKAccuracy);
+            Dispatcher.Invoke(() =>
+            {
+                Info5.Content = $"Traning done. Accuracy: {metrics.TopKAccuracy:P2}, Traning Time: {traningTime}, Validate Time: {validateTime}";
+            });
+            _predictionEngine5 = mlContext.Model.CreatePredictionEngine<ModelInput, ModelOutput>(model);
+        }
+
+        private void T5_Train_Button_Click(object sender, RoutedEventArgs e)
+        {
+            if (_predictionEngine5 == null)
+            {
+                Task.Run(Train2);
+            }
+        }
+
+        private void T5_Browse_Button_Click(object sender, RoutedEventArgs e)
+        {
+            if (_predictionEngine5 != null)
+            {
+                var dialog = new OpenFileDialog();
+                if (dialog.ShowDialog() ?? false)
+                {
+                    var prediction = _predictionEngine5.Predict(new ModelInput { ImageSource = dialog.FileName });
+                    using (var image = Image.FromStream(dialog.OpenFile()))
+                    using (var bitmap = new Bitmap(image))
+                    {
+                        var index = Array.IndexOf(_builder2Results, prediction.Prediction);
+                        Dispatcher.Invoke(() =>
+                        {
+                            Image5.Source = bitmap.ToBitmapImage();
+                        });
+                    }
                 }
             }
         }

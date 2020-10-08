@@ -26,8 +26,11 @@ namespace Traning.MachineLearning.ObjectDetection
         private PredictionEngine<HumanData, HumanPrediction> _predictionEngine1;
         private PredictionEngine<ObjectData, ObjectDetectionPrediction> _predictionEngine3;
         private PredictionEngine<ModelInput, ModelOutput> _predictionEngine5;
-        private string _imagesFolder1 = @"h:\data\human-detection";
-        private string _imagesFolder5 = @"h:\data\cars";
+        private string _model1Path = @"c:\data\models\tensorflow_inception_graph.pb";
+        private string _model3Path = @"c:\data\models\tinyyolov2-8.onnx";
+        private string _model5Path = @"c:\data\models\tensorflow_inception_graph.pb";
+        private string _imagesFolder1 = @"c:\data\human-detection";
+        private string _imagesFolder5 = @"c:\data\cars";
         private YoloOutputParser _parser = new YoloOutputParser();
         private Stopwatch _stopwatch = new Stopwatch();
 
@@ -40,14 +43,13 @@ namespace Traning.MachineLearning.ObjectDetection
 
         private void Train1()
         {
-            var tfm = @"h:\data\models\tensorflow_inception_graph.pb";
             var mlContext = new MLContext();
             var data = mlContext.Data.LoadFromTextFile<HumanData>($"{_imagesFolder1}\\data.csv", separatorChar: ',');
             var split = mlContext.Data.TrainTestSplit(data, 0.8);
             var pipe = mlContext.Transforms.LoadImages("Image", _imagesFolder1, "Path")
                 .Append(mlContext.Transforms.ResizeImages("ImageResized", 244, 244, "Image"))
                 .Append(mlContext.Transforms.ExtractPixels("input", "ImageResized", interleavePixelColors: true))
-                .Append(mlContext.Model.LoadTensorFlowModel(tfm).ScoreTensorFlowModel("softmax1_pre_activation", "input", true))
+                .Append(mlContext.Model.LoadTensorFlowModel(_model1Path).ScoreTensorFlowModel("softmax1_pre_activation", "input", true))
                 .Append(mlContext.BinaryClassification.Trainers.LbfgsLogisticRegression(labelColumnName: "Label", featureColumnName: "softmax1_pre_activation"));
 
             var stopwatch = new Stopwatch();
@@ -58,10 +60,12 @@ namespace Traning.MachineLearning.ObjectDetection
             stopwatch.Stop();
             var traningTime = stopwatch.Elapsed;
             stopwatch.Restart();
-            var metrics = mlContext.BinaryClassification.CrossValidate(test, pipe);
+            var metrics = mlContext.BinaryClassification.Evaluate(test);
+            //var metrics = mlContext.BinaryClassification.CrossValidate(test, pipe);
             stopwatch.Stop();
             var validateTime = stopwatch.Elapsed;
-            var mean = metrics.Average(x => x.Metrics.Accuracy);
+            var mean = metrics.Accuracy;
+            //var mean = metrics.Average(x => x.Metrics.Accuracy);
             Dispatcher.Invoke(() =>
             {
                 Info1.Content = $"Traning done. Accuracy: {mean:P2}, Traning Time: {traningTime}, Validate Time: {validateTime}";
@@ -181,12 +185,11 @@ namespace Traning.MachineLearning.ObjectDetection
 
         private void T3_Start_Button_Click(object sender, RoutedEventArgs e)
         {
-            var onnx = @"h:\data\models\tinyyolov2-8.onnx";
             var mlContext = new MLContext();
             var pipe = mlContext.Transforms.LoadImages("image", _imagesFolder1, "Path")
                 .Append(mlContext.Transforms.ResizeImages("image", 416, 416))
                 .Append(mlContext.Transforms.ExtractPixels("image"))
-                .Append(mlContext.Transforms.ApplyOnnxModel(modelFile: onnx, outputColumnNames: new[] { "grid" }, inputColumnNames: new[] { "image" }));
+                .Append(mlContext.Transforms.ApplyOnnxModel(modelFile: _model3Path, outputColumnNames: new[] { "grid" }, inputColumnNames: new[] { "image" }));
 
             var data = mlContext.Data.LoadFromEnumerable(new List<ObjectData>());
             _predictionEngine3 = mlContext.Model.CreatePredictionEngine<ObjectData, ObjectDetectionPrediction>(pipe.Fit(data));
@@ -265,7 +268,6 @@ namespace Traning.MachineLearning.ObjectDetection
 
         private void Train2()
         {
-            var tfm = @"h:\data\models\tensorflow_inception_graph.pb";
             var mlContext = new MLContext();
             var list = new List<ModelInput>();
             list.AddRange(Directory.GetFiles($"{_imagesFolder5}\\audi").Select(x => new ModelInput { ImageSource = x, Label = "audi" }).ToArray());
@@ -276,7 +278,7 @@ namespace Traning.MachineLearning.ObjectDetection
             var pipe = mlContext.Transforms.LoadImages("Image", _imagesFolder5, "ImageSource")
                 .Append(mlContext.Transforms.ResizeImages("ImageResized", 244, 244, "Image"))
                 .Append(mlContext.Transforms.ExtractPixels("input", "ImageResized", interleavePixelColors: true))
-                .Append(mlContext.Model.LoadTensorFlowModel(tfm).ScoreTensorFlowModel("softmax2_pre_activation", "input", true))
+                .Append(mlContext.Model.LoadTensorFlowModel(_model5Path).ScoreTensorFlowModel("softmax2_pre_activation", "input", true))
                 .Append(mlContext.MulticlassClassification.Trainers.NaiveBayes(labelColumnName: "Label", featureColumnName: "softmax2_pre_activation"));
 
             var stopwatch = new Stopwatch();

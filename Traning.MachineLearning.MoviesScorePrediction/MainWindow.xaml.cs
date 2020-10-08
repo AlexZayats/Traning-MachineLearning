@@ -37,7 +37,7 @@ namespace Traning.MachineLearning.MoviesScorePrediction
                 movie.Keywords = (await client.GetMovieKeywords(movie.Id)).Keywords;
                 if (movie.Keywords?.Any() ?? false)
                 {
-                    await File.AppendAllTextAsync($"h:\\data\\movies2\\{movie.Id}.json", JsonConvert.SerializeObject(movie));
+                    await File.AppendAllTextAsync($"c:\\data\\movies2\\{movie.Id}.json", JsonConvert.SerializeObject(movie));
                 }
             }
             */
@@ -50,7 +50,7 @@ namespace Traning.MachineLearning.MoviesScorePrediction
                 movie.Keywords = (await client.GetMovieKeywords(movie.Id)).Keywords;
             }
             Genres = (await client.GetGenresMovie()).Genres.ToDictionary(k => k.Id, v => v.Name);
-            TrainMovies.AddRange(Directory.GetFiles(@"h:\data\movies2").Select(x => File.ReadAllText(x)).Select(x => JsonConvert.DeserializeObject<Movie>(x)).Where(x => !TestMovies.Any(e => e.Id == x.Id)));
+            TrainMovies.AddRange(Directory.GetFiles(@"c:\data\movies2").Select(x => File.ReadAllText(x)).Select(x => JsonConvert.DeserializeObject<Movie>(x)).Where(x => !TestMovies.Any(e => e.Id == x.Id)));
             Train();
             Movies.ItemsSource = TestMovies;
         }
@@ -62,20 +62,21 @@ namespace Traning.MachineLearning.MoviesScorePrediction
             var data = context.Data.LoadFromEnumerable(trainInputs);
             var trainTestData = context.Data.TrainTestSplit(data, testFraction: 0.2);
 
-            /*
             var pipeline = context.Transforms.Text.FeaturizeText(outputColumnName: "FeaturizedKeywords", inputColumnName: "Keywords")
                 .Append(context.Transforms.Text.FeaturizeText(outputColumnName: "FeaturizedGenres", inputColumnName: "Genres"))
-                .Append(context.Transforms.Concatenate("Features", "FeaturizedKeywords", "FeaturizedGenres"))
+                .Append(context.Transforms.Text.FeaturizeText(outputColumnName: "FeaturizedDescription", inputColumnName: "Description"))
+                .Append(context.Transforms.Concatenate("Features", "FeaturizedKeywords", "FeaturizedGenres", "FeaturizedDescription"))
                 .Append(context.BinaryClassification.Trainers.LightGbm());
-            */
 
             /*
             var pipeline = context.Transforms.Text.FeaturizeText(outputColumnName: "Features", inputColumnName: "Keywords")
                .Append(context.BinaryClassification.Trainers.LightGbm());
             */
 
+            /*
             var pipeline = context.Transforms.Text.FeaturizeText(outputColumnName: "Features", inputColumnName: "Keywords")
                .Append(context.BinaryClassification.Trainers.SdcaLogisticRegression());
+            */
 
             var model = pipeline.Fit(trainTestData.TrainSet);
             var predictions = model.Transform(trainTestData.TestSet);
@@ -102,8 +103,9 @@ namespace Traning.MachineLearning.MoviesScorePrediction
                 MovieId = x.Id,
                 Like = x.VoteAverage >= 6,
                 Title = x.Title,
-                Keywords = string.Join(" ", x.Keywords.Select(e => e.Name)),
-                Genres = string.Join(" ", x.GenreIds.Select(e => Genres[e])),
+                Overview = x.Overview,
+                Keywords = x.Keywords.Select(e => e.Name).ToArray(),
+                Genres = x.GenreIds.Select(e => Genres[e]).ToArray(),
             }).ToArray();
         }
     }

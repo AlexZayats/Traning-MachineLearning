@@ -7,6 +7,7 @@ namespace Traning.MachineLearning.MoviesScorePrediction.Models
         [ColumnName("PredictedLabel")]
         public bool Prediction { get; set; }
 
+        [ColumnName("Probability")]
         public float Probability { get; set; }
     }
 }

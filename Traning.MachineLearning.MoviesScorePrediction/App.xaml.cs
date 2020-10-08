@@ -17,7 +17,7 @@ namespace Traning.MachineLearning.MoviesScorePrediction
 
         private async Task Load()
         {
-            MDBSDK.ApiKey = "";
+            MDBSDK.ApiKey = ""; //API KEY FROM TMDb
             MDBSDK.Language = "en-US";
             using (var client = new ApiClient())
             {
